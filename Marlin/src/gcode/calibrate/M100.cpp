@@ -69,6 +69,17 @@
 
   #define MEMORY_END_CORRECTION 0
 
+#elif defined(IS_TEENSY40)
+  extern char __bss_end, __StackLimit, __HeapLimit;
+  char *end_bss = &__bss_end__,
+       *stacklimit = &__StackLimit,
+       *heaplimit = &__HeapLimit;
+
+  #define MEMORY_END_CORRECTION 0x200
+
+  char *free_memory_start = heaplimit,
+       *free_memory_end = stacklimit - MEMORY_END_CORRECTION;
+
 #elif defined(TARGET_LPC1768)
 
   extern char __bss_end__, __StackLimit, __HeapLimit;

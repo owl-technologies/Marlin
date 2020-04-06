@@ -46,6 +46,11 @@ enum MarlinDebugFlags : uint8_t {
 extern uint8_t marlin_debug_flags;
 #define DEBUGGING(F) (marlin_debug_flags & (MARLIN_DEBUG_## F))
 
+#if (IS_TEENSY40)
+#undef PSTR
+#define PSTR(v) (v)
+#endif
+
 #define SERIAL_BOTH 0x7F
 #if NUM_SERIAL > 1
   extern int8_t serial_port_index;

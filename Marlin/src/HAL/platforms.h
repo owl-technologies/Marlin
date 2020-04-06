@@ -29,6 +29,8 @@
   #define HAL_PLATFORM HAL_TEENSY31_32
 #elif defined(__MK64FX512__) || defined(__MK66FX1M0__)
   #define HAL_PLATFORM HAL_TEENSY35_36
+#elif defined(__IMXRT1062__)
+  #define HAL_PLATFORM HAL_TEENSY40
 #elif defined(TARGET_LPC1768)
   #define HAL_PLATFORM HAL_LPC1768
 #elif defined(__STM32F1__) || defined(TARGET_STM32F1)
