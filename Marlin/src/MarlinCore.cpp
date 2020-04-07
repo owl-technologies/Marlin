@@ -1127,6 +1127,8 @@ void setup() {
   #if ENABLED(PRUSA_MMU2)
     mmu2.init();
   #endif
+
+  pinMode(13, OUTPUT);
 }
 
 /**
@@ -1138,6 +1140,8 @@ void setup() {
  *  - Call inactivity manager
  */
 void loop() {
+  static int i = 0, k = 0;
+  static int ledst = 0;
   do {
 
     idle();
@@ -1150,6 +1154,16 @@ void loop() {
     queue.advance();
 
     endstops.event_handler();
+
+  i++;
+//  if(i % 1000 == 0){
+    k++;
+    if(k % 500000 == 0 ){ //10000  - 5ms
+      k = 0;
+      ledst++;
+      digitalWrite(13, ledst % 2);
+    }
+//  }
 
   } while (false        // Return to caller for best compatibility
     #ifdef __AVR__
