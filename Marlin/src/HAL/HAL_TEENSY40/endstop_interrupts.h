@@ -21,10 +21,6 @@
  */
 #pragma once
 
-#if defined(WARN_UNTESTED)
-#warning Teensy4.0 > Endstop Interrupts: This code has not been tested yet
-#endif
-
 /**
  * Endstop Interrupts
  *
@@ -49,38 +45,43 @@ void endstop_ISR() { endstops.update(); }
  * On Due, all pins support external interrupt capability.
  */
 void setup_endstop_interrupts() {
-  #define _ATTACH(P) attachInterrupt(digitalPinToInterrupt(P), endstop_ISR, CHANGE)
   #if HAS_X_MAX
-    _ATTACH(X_MAX_PIN);
+    attachInterrupt(X_MAX_PIN, endstop_ISR, CHANGE);
   #endif
   #if HAS_X_MIN
-    _ATTACH(X_MIN_PIN);
+    attachInterrupt(X_MIN_PIN, endstop_ISR, CHANGE);
   #endif
   #if HAS_Y_MAX
-    _ATTACH(Y_MAX_PIN);
+    attachInterrupt(Y_MAX_PIN, endstop_ISR, CHANGE);
   #endif
   #if HAS_Y_MIN
-    _ATTACH(Y_MIN_PIN);
+    attachInterrupt(Y_MIN_PIN, endstop_ISR, CHANGE);
   #endif
   #if HAS_Z_MAX
-    _ATTACH(Z_MAX_PIN);
+    attachInterrupt(Z_MAX_PIN, endstop_ISR, CHANGE);
   #endif
   #if HAS_Z_MIN
-     _ATTACH(Z_MIN_PIN);
+    attachInterrupt(Z_MIN_PIN, endstop_ISR, CHANGE);
   #endif
   #if HAS_Z2_MAX
-    _ATTACH(Z2_MAX_PIN);
+    attachInterrupt(Z2_MAX_PIN, endstop_ISR, CHANGE);
   #endif
   #if HAS_Z2_MIN
-    _ATTACH(Z2_MIN_PIN);
+    attachInterrupt(Z2_MIN_PIN, endstop_ISR, CHANGE);
   #endif
   #if HAS_Z3_MAX
-    _ATTACH(Z3_MAX_PIN);
+    attachInterrupt(Z3_MAX_PIN, endstop_ISR, CHANGE);
   #endif
   #if HAS_Z3_MIN
-    _ATTACH(Z3_MIN_PIN);
+    attachInterrupt(Z3_MIN_PIN, endstop_ISR, CHANGE);
+  #endif
+  #if HAS_Z4_MAX
+    attachInterrupt(Z4_MAX_PIN, endstop_ISR, CHANGE);
+  #endif
+  #if HAS_Z4_MIN
+    attachInterrupt(Z4_MIN_PIN, endstop_ISR, CHANGE);
   #endif
   #if HAS_Z_MIN_PROBE_PIN
-    _ATTACH(Z_MIN_PROBE_PIN);
+    attachInterrupt(Z_MIN_PROBE_PIN, endstop_ISR, CHANGE);
   #endif
 }

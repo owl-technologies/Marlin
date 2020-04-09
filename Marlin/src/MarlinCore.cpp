@@ -57,6 +57,8 @@
 #include "gcode/parser.h"
 #include "gcode/queue.h"
 
+#include <oled.h>
+
 #if ENABLED(TOUCH_BUTTONS)
   #include "feature/touch/xpt2046.h"
 #endif
@@ -1128,7 +1130,10 @@ void setup() {
     mmu2.init();
   #endif
 
-  pinMode(13, OUTPUT);
+  SET_OUTPUT(13);
+  setup_oled();
+//  loop_oled();
+
 }
 
 /**
@@ -1140,7 +1145,7 @@ void setup() {
  *  - Call inactivity manager
  */
 void loop() {
-  static int i = 0, k = 0;
+  static int k = 0;
   static int ledst = 0;
   do {
 
@@ -1155,15 +1160,12 @@ void loop() {
 
     endstops.event_handler();
 
-  i++;
-//  if(i % 1000 == 0){
     k++;
     if(k % 500000 == 0 ){ //10000  - 5ms
       k = 0;
       ledst++;
-      digitalWrite(13, ledst % 2);
+      WRITE(13, ledst % 2);
     }
-//  }
 
   } while (false        // Return to caller for best compatibility
     #ifdef __AVR__

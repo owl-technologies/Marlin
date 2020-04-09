@@ -101,7 +101,7 @@
 //
 #define X_STOP_PIN         -1
 #define Y_STOP_PIN         -1
-#define Z_STOP_PIN         27
+#define Z_STOP_PIN         2
 //
 // Steppers
 //
@@ -110,7 +110,7 @@
 #define X_ENABLE_PIN       6
 #define X_CS_PIN           18
 
-#define Y_STEP_PIN         2
+#define Y_STEP_PIN         -1
 #define Y_DIR_PIN          3
 #define Y_ENABLE_PIN       7
 #define Y_CS_PIN         10
@@ -146,17 +146,17 @@
 #define ALARM_PIN          -1
 
 #define FILWIDTH_PIN       -1
-#define SERVO0_PIN         24
-#define SERVO1_PIN         25
+#define SERVO0_PIN         -1
+#define SERVO1_PIN         -1
 
 #ifndef NEOPIXEL_PIN
 #define NEOPIXEL_PIN       32
 #endif
 
-#define TMC_USE_SW_SPI
-#define TMC_SW_MOSI        34 // ?
-#define TMC_SW_MISO        35 // ?
-#define TMC_SW_SCK         36 // ?
+// #define TMC_USE_SW_SPI
+// #define TMC_SW_MOSI        34 // ?
+// #define TMC_SW_MISO        35 // ?
+// #define TMC_SW_SCK         36 // ?
 
 #if HAS_SPI_LCD
   #define LCD_PINS_RS      38

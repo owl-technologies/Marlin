@@ -21,9 +21,6 @@
  */
 #pragma once
 
-#if defined(WARN_UNTESTED)
-#warning Teensy4.0 > FastIO: This code has not been tested yet
-#endif
 /**
  * Fast I/O Routines for Teensy 3.5 and Teensy 3.6
  * Use direct port manipulation to save scads of processor time.
@@ -35,71 +32,37 @@
 #endif
 
 
-/**
- * Magic I/O routines
- *
- * Now you can simply SET_OUTPUT(PIN); WRITE(PIN, HIGH); WRITE(PIN, LOW);
- *
- * Why double up on these macros? see http://gcc.gnu.org/onlinedocs/cpp/Stringification.html
- */
-#define IOMUX_ALT(n) (n)
-#define IOMUX_SION (1<<4)
-#define IOMUX_GPIO IOMUX_ALT(5)
-#define IOMUX_DRIVE_STRENGTH(n) (((n)&0x7)<<3)
+#ifndef PWM
+  #define PWM OUTPUT
+#endif
 
-#define _READ(P) bool(CORE_PIN ## P ## _PINREG & CORE_PIN ## P ## _BITMASK)
+#define READ(IO)                digitalRead(IO)
+#define WRITE(IO,V)             digitalWrite(IO,V)
 
-#define _WRITE(P,V) do{ \
-  if (V) CORE_PIN ## P ## _PORTSET = CORE_PIN ## P ## _BITMASK; \
-  else CORE_PIN ## P ## _PORTCLEAR = CORE_PIN ## P ## _BITMASK; \
-}while(0)
+#define _GET_MODE(IO)
+#define _SET_MODE(IO,M)         pinMode(IO, M)
+#define _SET_OUTPUT(IO)         pinMode(IO, OUTPUT)                               /*!< Output Push Pull Mode & GPIO_NOPULL   */
 
-#define _TOGGLE(P) (*(&(CORE_PIN ## P ## _PORTCLEAR)+1) = CORE_PIN ## P ## _BITMASK)
+#define OUT_WRITE(IO,V)         do{ _SET_OUTPUT(IO); WRITE(IO,V); }while(0)
 
-#define _SET_INPUT(P) do{ \
-  CORE_PIN ## P ## _CONFIG = IOMUX_GPIO | IOMUX_SION; \
-  CORE_PIN ## P ## _PADCONFIG = IOMUXC_PAD_HYS | IOMUXC_PAD_PUE; \
-  CORE_PIN ## P ## _DDRREG &= ~(CORE_PIN ## P ## _BITMASK); \
-}while(0)
+#define SET_INPUT(IO)           _SET_MODE(IO, INPUT)                              /*!< Input Floating Mode                   */
+#define SET_INPUT_PULLUP(IO)    _SET_MODE(IO, INPUT_PULLUP)                       /*!< Input with Pull-up activation         */
+#define SET_INPUT_PULLDOWN(IO)  _SET_MODE(IO, INPUT_PULLDOWN)                     /*!< Input with Pull-down activation       */
+#define SET_OUTPUT(IO)          OUT_WRITE(IO, LOW)
+#define SET_PWM(IO)             _SET_MODE(IO, PWM)
 
-#define _SET_OUTPUT(P) do{ \
-  CORE_PIN ## P ## _CONFIG = IOMUX_GPIO; \
-  CORE_PIN ## P ## _PADCONFIG = IOMUX_DRIVE_STRENGTH(1); \
-  CORE_PIN ## P ## _DDRREG |= CORE_PIN ## P ## _BITMASK; \
-}while(0)
+#define TOGGLE(IO)              OUT_WRITE(IO, !READ(IO))
 
-#define _SET_INPUT_PULLUP(P) do{ \
-  CORE_PIN ## P ## _CONFIG = IOMUX_GPIO | IOMUX_SION; \
-  CORE_PIN ## P ## _PADCONFIG = IOMUXC_PAD_HYS | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(1); \
-  CORE_PIN ## P ## _DDRREG &= ~(CORE_PIN ## P ## _BITMASK); \
-}while(0)
+#define IS_INPUT(IO)
+#define IS_OUTPUT(IO)
 
-#define _IS_INPUT(P)    ((CORE_PIN ## P ## _DDRREG & CORE_PIN ## P ## _BITMASK) == 0)
-#define _IS_OUTPUT(P)   ((CORE_PIN ## P ## _DDRREG & CORE_PIN ## P ## _BITMASK) != 0)
-
-#define READ(IO)              _READ(IO)
-
-#define WRITE(IO,V)           _WRITE(IO,V)
-#define TOGGLE(IO)            _TOGGLE(IO)
-
-#define SET_INPUT(IO)         _SET_INPUT(IO)
-#define SET_INPUT_PULLUP(IO)  _SET_INPUT_PULLUP(IO)
-#define SET_OUTPUT(IO)        _SET_OUTPUT(IO)
-#define SET_PWM(IO)            SET_OUTPUT(IO)
-
-#define IS_INPUT(IO)          _IS_INPUT(IO)
-#define IS_OUTPUT(IO)         _IS_OUTPUT(IO)
-
-#define OUT_WRITE(IO,V)       do{ SET_OUTPUT(IO); WRITE(IO,V); }while(0)
+#define PWM_PIN(P)              true
 
 // digitalRead/Write wrappers
 #define extDigitalRead(IO)    digitalRead(IO)
 #define extDigitalWrite(IO,V) digitalWrite(IO,V)
-
-#define PWM_PIN(P)            digitalPinHasPWM(P)
-
 /**
  * Ports, functions, and pins
  */
 
-#define DIO0_PIN 8
+//#define DIO0_PIN 8
