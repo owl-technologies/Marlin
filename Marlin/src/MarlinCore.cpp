@@ -57,7 +57,7 @@
 #include "gcode/parser.h"
 #include "gcode/queue.h"
 
-#include <oled.h>
+// #include <oled.h>
 
 #if ENABLED(TOUCH_BUTTONS)
   #include "feature/touch/xpt2046.h"
@@ -1131,7 +1131,7 @@ void setup() {
   #endif
 
   SET_OUTPUT(13);
-  setup_oled();
+//  setup_oled();
 //  loop_oled();
 
 }
