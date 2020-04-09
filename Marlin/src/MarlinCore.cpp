@@ -1131,6 +1131,7 @@ void setup() {
   #endif
 
   SET_OUTPUT(13);
+  WRITE(13, 1);
 //  setup_oled();
 //  loop_oled();
 
@@ -1161,7 +1162,7 @@ void loop() {
     endstops.event_handler();
 
     k++;
-    if(k % 500000 == 0 ){ //10000  - 5ms
+    if(k % 500000 == 0 ){ //500000;10000  - 5ms
       k = 0;
       ledst++;
       WRITE(13, ledst % 2);

@@ -105,44 +105,44 @@
 //
 // Steppers
 //
-#define X_STEP_PIN         0
-#define X_DIR_PIN          1
-#define X_ENABLE_PIN       6
-#define X_CS_PIN           18
+#define X_STEP_PIN         -1
+#define X_DIR_PIN          -1
+#define X_ENABLE_PIN       -1
+#define X_CS_PIN           -1
 
 #define Y_STEP_PIN         -1
-#define Y_DIR_PIN          3
-#define Y_ENABLE_PIN       7
-#define Y_CS_PIN         10
-#define Y2_CS_PIN         11
+#define Y_DIR_PIN          -1
+#define Y_ENABLE_PIN       -1
+#define Y_CS_PIN         -1
+#define Y2_CS_PIN         -1
 
-#define Z_STEP_PIN         4
-#define Z_DIR_PIN          5
-#define Z_ENABLE_PIN       8
+#define Z_STEP_PIN         -1
+#define Z_DIR_PIN          -1
+#define Z_ENABLE_PIN       -1
 
-#define E0_STEP_PIN        23
-#define E0_DIR_PIN         22
-#define E0_ENABLE_PIN      21
+#define E0_STEP_PIN        7
+#define E0_DIR_PIN         8
+#define E0_ENABLE_PIN      9
 
-#define HEATER_0_PIN       15
-#define HEATER_1_PIN       14
-#define HEATER_BED_PIN     19
+#define HEATER_0_PIN       5
+#define HEATER_1_PIN       -1
+#define HEATER_BED_PIN     -1
 
 #ifndef FAN_PIN
-#define FAN_PIN            28 
+#define FAN_PIN            -1
 #endif
 
 #ifndef CONTROLLER_FAN_PIN
-#define CONTROLLER_FAN_PIN 26 
+#define CONTROLLER_FAN_PIN -1
 #endif
 
-#define TEMP_0_PIN          16   // Extruder / Analog pin numbering: 2 => A2
-#define TEMP_1_PIN          17
-#define TEMP_BED_PIN        20   // Bed / Analog pin numbering
+#define TEMP_0_PIN          14   // Extruder / Analog pin numbering: 2 => A2
+#define TEMP_1_PIN          -1
+#define TEMP_BED_PIN        -1   // Bed / Analog pin numbering
 
 #define SDSS               -1   // 8
 #define LED_PIN            -1
-#define PS_ON_PIN          30
+#define PS_ON_PIN          -1
 #define ALARM_PIN          -1
 
 #define FILWIDTH_PIN       -1
@@ -150,7 +150,7 @@
 #define SERVO1_PIN         -1
 
 #ifndef NEOPIXEL_PIN
-#define NEOPIXEL_PIN       32
+#define NEOPIXEL_PIN       -1
 #endif
 
 // #define TMC_USE_SW_SPI
