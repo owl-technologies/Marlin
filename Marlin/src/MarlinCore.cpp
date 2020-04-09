@@ -1150,6 +1150,7 @@ void loop() {
   static int ledst = 0;
   do {
 
+    HAL_watchdog_refresh();
     idle();
 
     #if ENABLED(SDSUPPORT)

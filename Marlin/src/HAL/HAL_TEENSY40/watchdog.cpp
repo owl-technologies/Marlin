@@ -33,12 +33,9 @@
 #include "watchdog.h"
 
 void watchdog_init() {
-  WDOG1_WMCR = 0; // (PDE: power down enabled) must be done within 16 seconds of power up ?
-
-  WDOG1_WCR = WDOG_WCR_WT(3) // set 2 second counter ?
-            | WDOG_WCR_SRE;   // use new robust software reset ?
-  
-  WDOG1_WCR |= WDOG_WCR_WDE;
+  WDOG1_WCR |= WDOG_WCR_WDE | WDOG_WCR_WDT | WDOG_WCR_SRE;
+  WDOG1_WMCR = 0;
+  WDOG1_WICR |= (3UL << 14);
 }
 
 #endif // USE_WATCHDOG
