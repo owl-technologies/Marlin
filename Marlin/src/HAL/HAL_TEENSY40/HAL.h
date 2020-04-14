@@ -123,7 +123,7 @@ void HAL_adc_init();
 #define HAL_READ_ADC()      HAL_adc_get_result()
 #define HAL_ADC_READY()     HAL_adc_ready()
 
-#define HAL_ANALOG_SELECT(pin)
+#define HAL_ANALOG_SELECT(pin) SET_INPUT(pin)
 
 void HAL_adc_start_conversion(const uint8_t adc_pin);
 uint16_t HAL_adc_get_result();

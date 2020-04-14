@@ -134,11 +134,8 @@ void HAL_adc_start_conversion(const uint8_t adc_pin) {
 
 uint16_t HAL_adc_get_result() {
   switch (HAL_adc_select) {
-    case 0: 
-      return ADC1_R0;
-
-    case 1: 
-      return ADC2_R0;
+    case 0: return ADC1_R0;
+    case 1: return ADC2_R0;
   }
   return 0;
 }
