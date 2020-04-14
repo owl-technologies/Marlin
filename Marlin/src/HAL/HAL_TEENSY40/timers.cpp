@@ -32,7 +32,7 @@
 
 #include "HAL.h"
 #include "timers.h"
-
+#include "../../core/serial.h"
 /** \brief Instruction Synchronization Barrier
   Instruction Synchronization Barrier flushes the pipeline in the processor,
   so that all instructions following the ISB are fetched from cache or
@@ -50,28 +50,28 @@ FORCE_INLINE static void __DSB() {
   __asm__ __volatile__("dsb 0xF":::"memory");
 }
 
-void isr_pit() {
-  if (PIT_TFLG1 & PIT_TFLG_TIF) proxy_isr_pit1();
-  if (PIT_TFLG3 & PIT_TFLG_TIF) proxy_isr_pit3();
-}
-
 void HAL_timer_start(const uint8_t timer_num, const uint32_t frequency) {
-  static bool init = false;
-  if (!init) {
-    PIT_MCR = 0x00;
-    init = true;
-    attachInterruptVector(IRQ_PIT, &isr_pit);
-    NVIC_SET_PRIORITY(IRQ_PIT, 16);
-  }
-
   switch (timer_num) {
     case 0:
-      PIT_LDVAL1 = F_24M / frequency;
-      PIT_TCTRL1 |= PIT_TCTRL_TEN;
+        CCM_CCGR1 |= CCM_CCGR1_GPT1_BUS(CCM_CCGR_ON) ;  // enable GPT1 module
+        GPT1_CR = 0;
+        GPT1_PR = 0;   // prescale+1
+        GPT1_OCR1 = HAL_TIMER_RATE / frequency - 1;  // compare
+        GPT1_SR = 0x3F; // clear all prior status
+        GPT1_IR = GPT_IR_OF1IE;
+        GPT1_CR = GPT_CR_EN | GPT_CR_CLKSRC(1) ;// 1 ipg 24mhz   
+        attachInterruptVector(IRQ_GPT1, step_isr_pit1);
+//        NVIC_SET_PRIORITY(IRQ_GPT1, 1);
       break;
     case 1:
-      PIT_LDVAL3 = F_24M / frequency;
-      PIT_TCTRL3 |= PIT_TCTRL_TEN;
+        CCM_CCGR0 |= CCM_CCGR0_GPT2_BUS(CCM_CCGR_ON) ;
+        GPT2_CR = 0;
+        GPT2_PR = 0;   // prescale+1
+        GPT2_OCR1 = HAL_TIMER_RATE / frequency - 1;  // compare
+        GPT2_SR = 0x3F; // clear all prior status
+        GPT2_IR = GPT_IR_OF1IE;
+        GPT2_CR = GPT_CR_EN | GPT_CR_CLKSRC(1) ;// 1 ipg 24mhz   
+        attachInterruptVector(IRQ_GPT2, temp_isr_pit3);
       break;
   }
 }
@@ -79,29 +79,23 @@ void HAL_timer_start(const uint8_t timer_num, const uint32_t frequency) {
 void HAL_timer_enable_interrupt(const uint8_t timer_num) {
   switch (timer_num) {
     case 0:
-      PIT_TCTRL1 |= PIT_TCTRL_TIE;
+      NVIC_ENABLE_IRQ(IRQ_GPT1);
       break;
     case 1:
-      PIT_TCTRL3 |= PIT_TCTRL_TIE;
+      NVIC_ENABLE_IRQ(IRQ_GPT2);
       break;
-  }
-  
-  int any = PIT_TCTRL1 & PIT_TCTRL3 & PIT_TCTRL_TIE;
-  if (any) NVIC_ENABLE_IRQ(IRQ_PIT);
-  
+  }  
 }
 
 void HAL_timer_disable_interrupt(const uint8_t timer_num) {
   switch (timer_num) {
     case 0:
-      PIT_TCTRL1 &= ~PIT_TCTRL_TIE;
+      NVIC_DISABLE_IRQ(IRQ_GPT1);
       break;
     case 1:
-      PIT_TCTRL3 &= ~PIT_TCTRL_TIE;
+      NVIC_DISABLE_IRQ(IRQ_GPT2);
       break;
   }
-  int any = PIT_TCTRL1 & PIT_TCTRL3 & PIT_TCTRL_TIE;
-  if (!any) NVIC_DISABLE_IRQ(IRQ_PIT);
   
   // We NEED memory barriers to ensure Interrupts are actually disabled!
   // ( https://dzone.com/articles/nvic-disabling-interrupts-on-arm-cortex-m-and-the )
@@ -112,9 +106,9 @@ void HAL_timer_disable_interrupt(const uint8_t timer_num) {
 bool HAL_timer_interrupt_enabled(const uint8_t timer_num) {
   switch (timer_num) {
     case 0:
-      return NVIC_IS_ENABLED(IRQ_PIT) && (PIT_TCTRL1 & PIT_TCTRL_TIE);
+      return NVIC_IS_ENABLED(IRQ_GPT1);
     case 1:
-      return NVIC_IS_ENABLED(IRQ_PIT) && (PIT_TCTRL3 & PIT_TCTRL_TIE);
+      return NVIC_IS_ENABLED(IRQ_GPT2);
   }
   return false;
 }
@@ -122,10 +116,11 @@ bool HAL_timer_interrupt_enabled(const uint8_t timer_num) {
 void HAL_timer_isr_prologue(const uint8_t timer_num) {
   switch (timer_num) {
     case 0:
-      PIT_TFLG1 |= PIT_TFLG_TIF;
+        GPT1_SR |= GPT_SR_OF1;  // clear all set bits
+        // while (GPT1_SR & GPT_SR_OF3); // wait for clear
       break;
     case 1:
-      PIT_TFLG3 |= PIT_TFLG_TIF;
+      GPT2_SR |= GPT_SR_OF1;
       break;
   }
 }

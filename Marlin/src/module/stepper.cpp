@@ -1314,6 +1314,7 @@ void Stepper::set_directions() {
 HAL_STEP_TIMER_ISR() {
   HAL_timer_isr_prologue(STEP_TIMER_NUM);
 
+TOGGLE(0);
   Stepper::isr();
 
   HAL_timer_isr_epilogue(STEP_TIMER_NUM);
@@ -2284,7 +2285,7 @@ void Stepper::init() {
 
   #if DISABLED(I2S_STEPPER_STREAM)
     HAL_timer_start(STEP_TIMER_NUM, 122); // Init Stepper ISR to 122 Hz for quick starting
-  //  ENABLE_STEPPER_DRIVER_INTERRUPT();
+    ENABLE_STEPPER_DRIVER_INTERRUPT();
     sei();
   #endif
 

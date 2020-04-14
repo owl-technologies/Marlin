@@ -37,9 +37,7 @@
 typedef uint32_t hal_timer_t;
 #define HAL_TIMER_TYPE_MAX 0xFFFFFFFF
 
-#define F_24M 24000000
-
-#define HAL_TIMER_RATE         (F_24M)
+#define HAL_TIMER_RATE         24000000
 
 #define STEP_TIMER_NUM 0
 #define TEMP_TIMER_NUM 1
@@ -62,11 +60,10 @@ typedef uint32_t hal_timer_t;
 #define ENABLE_TEMPERATURE_INTERRUPT() HAL_timer_enable_interrupt(TEMP_TIMER_NUM)
 #define DISABLE_TEMPERATURE_INTERRUPT() HAL_timer_disable_interrupt(TEMP_TIMER_NUM)
 
-#define HAL_STEP_TIMER_ISR()  extern "C" void proxy_isr_pit1() //void TC3_Handler()
-#define HAL_TEMP_TIMER_ISR()  extern "C" void proxy_isr_pit3() //void TC4_Handler()
-
-HAL_STEP_TIMER_ISR();
-HAL_TEMP_TIMER_ISR();
+#define HAL_STEP_TIMER_ISR()  void step_isr_pit1() //void TC3_Handler()
+#define HAL_TEMP_TIMER_ISR()  void temp_isr_pit3() //void TC4_Handler()
+extern void step_isr_pit1();
+extern void temp_isr_pit3();
 
 void isr_pit();
 
@@ -74,23 +71,23 @@ void HAL_timer_start(const uint8_t timer_num, const uint32_t frequency);
 
 FORCE_INLINE static void HAL_timer_set_compare(const uint8_t timer_num, const hal_timer_t compare) {
   switch (timer_num) {
-    case 0: PIT_LDVAL1 = compare; break;
-    case 1: PIT_LDVAL3 = compare; break;
+    case 0: GPT1_OCR1 = compare; break;
+    case 1: GPT2_OCR1 = compare; break;
   }
 }
 
-FORCE_INLINE static hal_timer_t HAL_timer_get_compare(const uint8_t timer_num) {
-  switch (timer_num) {
-    case 0: return PIT_LDVAL1;
-    case 1: return PIT_LDVAL3;
-  }
-  return 0;
-}
+// FORCE_INLINE static hal_timer_t HAL_timer_get_compare(const uint8_t timer_num) {
+//   switch (timer_num) {
+//     case 0: return PIT_LDVAL1;
+//     case 1: return PIT_LDVAL3;
+//   }
+//   return 0;
+// }
 
 FORCE_INLINE static hal_timer_t HAL_timer_get_count(const uint8_t timer_num) {
   switch (timer_num) {
-    case 0: return PIT_CVAL1;
-    case 1: return PIT_CVAL3;
+    case 0: return GPT1_CNT;
+    case 1: return GPT2_CNT;
   }
   return 0;
 }

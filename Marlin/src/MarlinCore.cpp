@@ -1131,6 +1131,7 @@ void setup() {
   #endif
 
   SET_OUTPUT(13);
+  SET_OUTPUT(0);
   WRITE(13, 1);
 //  setup_oled();
 //  loop_oled();
