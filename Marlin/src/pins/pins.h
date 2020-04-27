@@ -525,6 +525,9 @@
   #include "teensy3/pins_TEENSY31_32.h"         // TEENSY31_32                            env:teensy31
 #elif MB(TEENSY35_36)
   #include "teensy3/pins_TEENSY35_36.h"         // TEENSY35_36                            env:teensy35
+#elif _MB_1(TEENSY40)
+  #include "teensy4/pins_TEENSY40.h"            // TEENSY40
+
 
 //
 // STM32 ARM Cortex-M4F

@@ -1159,6 +1159,10 @@ void setup() {
 
   marlin_state = MF_RUNNING;
 
+  //Blink LED to indicate that marlin is runing
+  SET_OUTPUT(13);
+  SET_OUTPUT(0);
+  WRITE(13, 1);
   SETUP_LOG("setup() completed.");
 }
 
@@ -1176,7 +1180,10 @@ void setup() {
  *    as long as idle() or manage_inactivity() are being called.
  */
 void loop() {
+  static int k = 0;
+  static int ledst = 0;
   do {
+  HAL_watchdog_refresh();
     idle();
 
     #if ENABLED(SDSUPPORT)
@@ -1188,6 +1195,14 @@ void loop() {
     queue.advance();
 
     endstops.event_handler();
+
+
+    k++;
+    if(k % 500000 == 0 ){ //500000;10000  - 5ms
+      k = 0;
+      ledst++;
+      WRITE(13, ledst % 2);
+    }
 
   } while (ENABLED(__AVR__)); // Loop forever on slower (AVR) boards
 }

@@ -59,6 +59,7 @@ public:
   static inline void set_enabled(const bool enable) {
     const bool was = enabled();
     set_power(enable ? 255 : 0);
+    apply_power(enable ? 255 : 0); //THIS IS A  FIX FOR M3 and M4 to enable spindle delaye-start feature correctly. BREAKS THE DEV. PATTERN AND SHOULD BE FIXED. 
     if (was != enable) power_delay();
   }
 

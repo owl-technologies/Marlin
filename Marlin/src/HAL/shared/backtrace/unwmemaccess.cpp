@@ -129,6 +129,19 @@
 #define END_FLASH_ADDR    0x00140000
 #endif
 
+
+#ifdef __IMXRT1062__
+// For IMXRT1062 in TEENSY 4.0
+//  SRAM  (0x20200000 - 0x2028000) (512kb RAM1 not ITCM / DTCM)
+//  FLASH (0x60000000 - 0x601F0000) (2Mb - 64k EEPROM emulation + restore code)
+// ref: https://github.com/PaulStoffregen/cores/blob/master/teensy4/imxrt1062.ld
+//
+#define START_SRAM_ADDR   0x20200000
+#define END_SRAM_ADDR     0x20280000
+#define START_FLASH_ADDR  0x60000000
+#define END_FLASH_ADDR    0x601F0000
+#endif
+
 #ifdef __SAMD51P20A__
 // For SAMD51x20, valid address ranges are
 //  SRAM  (0x20000000 - 0x20040000) (256kb)
