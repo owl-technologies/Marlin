@@ -58,6 +58,7 @@
 #include "gcode/queue.h"
 
 // #include <oled.h>
+#include "main.h"
 
 #if ENABLED(TOUCH_BUTTONS)
   #include "feature/touch/xpt2046.h"
@@ -1166,6 +1167,7 @@ void setup() {
   WRITE(13, 1);
 //  setup_oled();
 //  loop_oled();
+  can_setup();
 
   SETUP_LOG("setup() completed.");
 }
@@ -1207,6 +1209,8 @@ void loop() {
       ledst++;
       WRITE(13, ledst % 2);
     }
+
+    can_proc_in_loop();
 
   } while (ENABLED(__AVR__)); // Loop forever on slower (AVR) boards
 }
