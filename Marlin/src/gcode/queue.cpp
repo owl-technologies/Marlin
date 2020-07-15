@@ -34,6 +34,7 @@ GCodeQueue queue;
 #include "../module/planner.h"
 #include "../module/temperature.h"
 #include "../MarlinCore.h"
+#include "../main.h"
 
 #if ENABLED(PRINTER_EVENT_LEDS)
   #include "../feature/leds/printer_event_leds.h"
@@ -294,7 +295,7 @@ void GCodeQueue::flush_and_request_resend() {
 
 inline bool serial_data_available() {
   return false
-    || MYSERIAL0.available()
+    || can_data_available() // || MYSERIAL0.available()
     #if NUM_SERIAL > 1
       || MYSERIAL1.available()
     #endif
@@ -303,7 +304,7 @@ inline bool serial_data_available() {
 
 inline int read_serial(const uint8_t index) {
   switch (index) {
-    case 0: return MYSERIAL0.read();
+    case 0: return can_read_serial(); //MYSERIAL0.read();
     #if NUM_SERIAL > 1
       case 1: return MYSERIAL1.read();
     #endif

@@ -6,59 +6,130 @@
 #undef min
 #undef max
 
+//supported axes bits
+//0 - reserved(always 0)
+//1 - 1 << 1 = 2 exstruder
+//2 - 1 << 2 = 4 Z axe
+#define SUPPORTED_AXES 2
+#define MARLIN_CAN_ID  0x711
+#define SIZE_CAN_BUF  256 //use only multiply of 2
+
 #include <FlexCAN_T4.h>
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> Can0;
 
+uint8_t serial_buf[SIZE_CAN_BUF];
+uint16_t serial_ptr_r, serial_ptr_w;
+uint8_t serial_wait_data = 0; //it should contein number of expected data len
+const uint8_t can_header[4] = {0xAA, 0xBB, 0xCC, 0xDD};
+
 void canSniff(const CAN_message_t &msg) {
-  Serial.print("MB "); Serial.print(msg.mb);
-  Serial.print("  OVERRUN: "); Serial.print(msg.flags.overrun);
-  Serial.print("  LEN: "); Serial.print(msg.len);
-  Serial.print(" EXT: "); Serial.print(msg.flags.extended);
-  Serial.print(" TS: "); Serial.print(msg.timestamp);
-  Serial.print(" ID: "); Serial.print(msg.id, HEX);
-  Serial.print(" Buffer: ");
-  for ( uint8_t i = 0; i < msg.len; i++ ) {
-    Serial.print(msg.buf[i], HEX); Serial.print(" ");
-  } Serial.println();  
-//   SERIAL_ECHO_MSG("MB "); SERIAL_ECHO_MSG(msg.mb);
-//   SERIAL_ECHO_MSG("  OVERRUN: "); SERIAL_ECHO_MSG(msg.flags.overrun);
-//   SERIAL_ECHO_MSG("  LEN: "); SERIAL_ECHO_MSG(msg.len);
-//   SERIAL_ECHO_MSG(" EXT: "); SERIAL_ECHO_MSG(msg.flags.extended);
-//   SERIAL_ECHO_MSG(" TS: "); SERIAL_ECHO_MSG(msg.timestamp);
-//   SERIAL_ECHO_MSG(" ID: "); SERIAL_ECHO_MSG(msg.id);
-//   SERIAL_ECHO_MSG(" Buffer: ");
-//   for ( uint8_t i = 0; i < msg.len; i++ ) {
-//     SERIAL_ECHO_MSG(msg.buf[i]); SERIAL_ECHO_MSG(" ");
-//   }
+  // Serial.print("MB "); Serial.print(msg.mb);
+  // Serial.print("  OVERRUN: "); Serial.print(msg.flags.overrun);
+  // Serial.print("  LEN: "); Serial.print(msg.len);
+  // Serial.print(" EXT: "); Serial.print(msg.flags.extended);
+  // Serial.print(" TS: "); Serial.print(msg.timestamp);
+  // Serial.print(" ID: "); Serial.print(msg.id, HEX);
+  // Serial.print(" Buffer: ");
+  // for ( uint8_t i = 0; i < msg.len; i++ ) {
+  //   Serial.print(msg.buf[i], HEX); Serial.print(" ");
+  // } Serial.println(); 
+  uint8_t i; 
+  uint16_t free_bytes_in_buf;
+  uint8_t str[16];
+  if(msg.id == MARLIN_CAN_ID){
+    if(serial_wait_data > 0){
+      if(serial_wait_data >= msg.len){
+        for(i = 0; i < msg.len; i++){
+          serial_buf[serial_ptr_w] = msg.buf[i];
+          serial_ptr_w = (serial_ptr_w + 1) & (SIZE_CAN_BUF - 1);
+          str[i] = msg.buf[i];
+        }
+        Serial.write(str, i);
+        serial_wait_data -= msg.len;
+      }else{
+        Serial.print(" wrong len, expected "); Serial.print(serial_wait_data);
+        Serial.print(" received "); Serial.print(msg.len);
+        serial_wait_data = 0;
+      }
+    }else if (msg.len == 5){
+      if(memcmp(can_header, msg.buf, 4) == 0){
+        free_bytes_in_buf = (SIZE_CAN_BUF - serial_ptr_w + serial_ptr_r) & (SIZE_CAN_BUF - 1);
+        if(free_bytes_in_buf >= msg.buf[4] ){
+          serial_wait_data = msg.buf[4];
+          Serial.print(" wait msg ");
+          Serial.println(serial_wait_data);
+        }else{
+          Serial.print(" No enough space for message len = "); Serial.print(msg.buf[4]);
+        }
+      }else{
+        Serial.print(" Wrong Header received "); 
+          for (i = 0; i < 4; i++ ) {
+            Serial.print(msg.buf[i], HEX); Serial.print(" ");
+          } Serial.println();
+      }
+    }else{
+      Serial.print("Unknown message: ");
+      Serial.print(" ID: "); Serial.print(msg.id, HEX);
+      for (i = 0; i < msg.len; i++ ) {
+        Serial.print(msg.buf[i], HEX); Serial.print(" ");
+      } Serial.println();  
+    }
+  }
+}
+
+void can_init_send_msg(){
+    CAN_message_t msg;
+    msg.id = MARLIN_CAN_ID;
+    msg.buf[0] = 0xDD;
+    msg.buf[1] = SUPPORTED_AXES;
+    msg.len = 2;
+    Can0.write(msg);
+    Serial.println("CAN inited ");
 }
 
 void can_setup(void) {
-//   Serial.begin(115200); delay(400);
-//   pinMode(6, OUTPUT); digitalWrite(6, LOW); /* optional tranceiver enable pin */
   Can0.begin();
-  Can0.setBaudRate(125000);
+  Can0.setBaudRate(500000);
   Can0.setMaxMB(16);
   Can0.enableFIFO();
   Can0.enableFIFOInterrupt();
   Can0.onReceive(canSniff);
   Can0.mailboxStatus();
+  can_init_send_msg();
+  serial_ptr_r = SIZE_CAN_BUF - 1;
+  serial_ptr_w = 0;
 }
 
 void can_proc_in_loop() {
   Can0.events();
-
-  static uint32_t timeout = millis();
-  if ( millis() - timeout > 2000 ) {
-    CAN_message_t msg;
-    msg.id = random(0x1,0x7FE);
-    for ( uint8_t i = 0; i < 8; i++ ) msg.buf[i] = i + 1;
-    Can0.write(msg);
-    timeout = millis();
-    Serial.print("CAN sent ");
+  // static uint32_t timeout = millis();
+  // if ( millis() - timeout > 2000 ) {
+  //   CAN_message_t msg;
+  //   msg.id = random(0x1,0x7FE);
+  //   for ( uint8_t i = 0; i < 8; i++ ) msg.buf[i] = i + 1;
+  //   Can0.write(msg);
+  //   timeout = millis();
+  //   Serial.print("CAN sent ");
+  // }
+}
+ 
+bool can_data_available(){
+  uint16_t available_bytes = (serial_ptr_w - serial_ptr_r - 1) & (SIZE_CAN_BUF - 1);
+  bool res;
+  if(available_bytes == 0){
+    res = false;
+  }else{
+    res = true;
   }
-
+  return res;
 }
 
+int can_read_serial(){
+  uint8_t c;
+  serial_ptr_r = ( serial_ptr_r + 1 ) & (SIZE_CAN_BUF - 1);
+  c = serial_buf[serial_ptr_r];
+  return c;
+}
 
 // There are 2 different versions of the board
 // OLED display=OLED(2,14,4); 
