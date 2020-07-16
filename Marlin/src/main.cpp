@@ -11,8 +11,9 @@
 //1 - 1 << 1 = 2 exstruder
 //2 - 1 << 2 = 4 Z axe
 #define SUPPORTED_AXES 2
+
 #define MARLIN_CAN_ID  0x711
-#define MASTER_CAN_ID  0x712
+#define MASTER_CAN_ID  0x710
 #define SIZE_CAN_BUF  256 //use only multiply of 2
 
 #include <FlexCAN_T4.h>
