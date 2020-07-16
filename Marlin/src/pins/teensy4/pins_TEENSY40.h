@@ -116,8 +116,8 @@
 #define Y_CS_PIN         -1
 #define Y2_CS_PIN         -1
 
-#define Z_STEP_PIN         -1
-#define Z_DIR_PIN          -1
+#define Z_STEP_PIN         7
+#define Z_DIR_PIN          8
 #define Z_ENABLE_PIN       4
 
 #define E0_STEP_PIN        9
