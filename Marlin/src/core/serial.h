@@ -72,8 +72,8 @@ extern uint8_t marlin_debug_flags;
 #define PORT_RESTORE()          _PORT_RESTORE(1)
 
 #define SERIAL_ECHO(x)          do{ SERIAL_OUT(print, x); SerialCAN.print(x); }while(0)
-#define SERIAL_ECHO_F(V...)     do{ SERIAL_OUT(print, V); }while(0)
-#define SERIAL_ECHOLN(x)        do{ SERIAL_OUT(println, x); }while(0)
+#define SERIAL_ECHO_F(V...)     SERIAL_OUT(print, V)
+#define SERIAL_ECHOLN(x)        SERIAL_OUT(println, x)
 #define SERIAL_PRINT(x,b)       SERIAL_OUT(print, x, b)
 #define SERIAL_PRINTLN(x,b)     SERIAL_OUT(println, x, b)
 #define SERIAL_PRINTF(V...)     SERIAL_OUT(printf, V)
@@ -90,7 +90,7 @@ extern uint8_t marlin_debug_flags;
 // Print up to 10 chars from a list
 #define __CHAR_N(N,V...)  _CHAR_##N(V)
 #define _CHAR_N(N,V...)   __CHAR_N(N,V)
-#define _CHAR_1(c)        SERIAL_OUT(write, c)
+#define _CHAR_1(c)        do{ SERIAL_OUT(write, c); SerialCAN.write(c); }while(0)
 #define _CHAR_2(a,b)      do{ _CHAR_1(a); _CHAR_1(b); }while(0)
 #define _CHAR_3(a,V...)   do{ _CHAR_1(a); _CHAR_2(V); }while(0)
 #define _CHAR_4(a,V...)   do{ _CHAR_1(a); _CHAR_3(V); }while(0)

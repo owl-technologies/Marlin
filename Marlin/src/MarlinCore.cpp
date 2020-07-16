@@ -842,6 +842,7 @@ void setup() {
 
   HAL_init();
 
+  can_setup();
   #if HAS_L64XX
     L64xxManager.init();  // Set up SPI, init drivers
   #endif
@@ -1166,7 +1167,6 @@ void setup() {
   WRITE(13, 1);
 //  setup_oled();
 //  loop_oled();
-  can_setup();
 
   SETUP_LOG("setup() completed.");
 }

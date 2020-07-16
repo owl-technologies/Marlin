@@ -29,12 +29,16 @@ class SerialToCAN
 	size_t print(long n, int base)			{ return (base == 10) ? print(n) : printNumber(n, base, 0); }
 	size_t print(unsigned long n, int base)		{ return printNumber(n, base, 0); }
 
+	size_t print(float f)					{ return printFloat(f, 2); }
+	size_t print(double d);
+
     size_t println(void);
 	size_t println(const String &s)			{ return print(s) + println(); }
 	size_t println(char c)				{ return print(c) + println(); }
 	size_t println(const char s[])			{ return print(s) + println(); }
   private:
 	size_t printNumber(unsigned long n, uint8_t base, uint8_t sign);
+	size_t printFloat(double number, uint8_t digits);
 };
 extern SerialToCAN SerialCAN;
 

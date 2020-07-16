@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <oled.h>
 #include "MarlinCore.h"
+#include "math.h"
 ///it needs to compile FlexCAN_T4 well
 #undef min
 #undef max
@@ -19,10 +20,17 @@ FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> Can0;
 
 SerialToCAN SerialCAN;
 
-uint8_t serial_buf[SIZE_CAN_BUF];
-uint16_t serial_ptr_r, serial_ptr_w;
+typedef struct{
+  uint16_t index_w;
+  uint16_t index_r;
+  uint8_t buf[SIZE_CAN_BUF];
+}can_buf_t;
+
+can_buf_t can_rx, can_tx;
+
 uint8_t serial_wait_data = 0; //it should contein number of expected data len
 const uint8_t can_header[4] = {0xAA, 0xBB, 0xCC, 0xDD};
+uint8_t wait_init_can = 1;
 
 //SerialToCAN SerialCAN;
 
@@ -44,8 +52,8 @@ void canSniff(const CAN_message_t &msg) {
     if(serial_wait_data > 0){
       if(serial_wait_data >= msg.len){
         for(i = 0; i < msg.len; i++){
-          serial_buf[serial_ptr_w] = msg.buf[i];
-          serial_ptr_w = (serial_ptr_w + 1) & (SIZE_CAN_BUF - 1);
+          can_rx.buf[can_rx.index_w] = msg.buf[i];
+          can_rx.index_w = (can_rx.index_w + 1) & (SIZE_CAN_BUF - 1);
           str[i] = msg.buf[i];
         }
         Serial.write(str, i);
@@ -57,7 +65,7 @@ void canSniff(const CAN_message_t &msg) {
       }
     }else if (msg.len == 5){
       if(memcmp(can_header, msg.buf, 4) == 0){
-        free_bytes_in_buf = (SIZE_CAN_BUF - serial_ptr_w + serial_ptr_r) & (SIZE_CAN_BUF - 1);
+        free_bytes_in_buf = (SIZE_CAN_BUF - can_rx.index_w + can_rx.index_r) & (SIZE_CAN_BUF - 1);
         if(free_bytes_in_buf >= msg.buf[4] ){
           serial_wait_data = msg.buf[4];
           Serial.print(" wait msg ");
@@ -86,7 +94,13 @@ void can_write_less_8bytes(const char *buffer, size_t size){
     msg.id = MASTER_CAN_ID;
     memcpy(msg.buf, buffer, size);
     msg.len = size;
-    Can0.write(msg);
+    if(wait_init_can){
+      Serial.print("waiting CAN init ");
+      Serial.println(size);
+    }else{
+      Can0.write(msg);
+    }
+    
 }
 
 void can_init_send_msg(){
@@ -117,14 +131,18 @@ size_t can_write(const char *buffer, size_t size){
 void can_setup(void) {
   Can0.begin();
   Can0.setBaudRate(500000);
-  Can0.setMaxMB(16);
+  Can0.setMaxMB(64);
   Can0.enableFIFO();
   Can0.enableFIFOInterrupt();
   Can0.onReceive(canSniff);
   Can0.mailboxStatus();
+  
+  can_rx.index_r = SIZE_CAN_BUF - 1;
+  can_rx.index_w = 0;
+  can_tx.index_r = SIZE_CAN_BUF - 1;
+  can_tx.index_w = 0;
+  wait_init_can = 0;  
   can_init_send_msg();
-  serial_ptr_r = SIZE_CAN_BUF - 1;
-  serial_ptr_w = 0;
 }
 
 void can_proc_in_loop() {
@@ -141,7 +159,7 @@ void can_proc_in_loop() {
 }
  
 bool can_data_available(){
-  uint16_t available_bytes = (serial_ptr_w - serial_ptr_r - 1) & (SIZE_CAN_BUF - 1);
+  uint16_t available_bytes = (can_rx.index_w - can_rx.index_r - 1) & (SIZE_CAN_BUF - 1);
   bool res;
   if(available_bytes == 0){
     res = false;
@@ -153,17 +171,63 @@ bool can_data_available(){
 
 int can_read_serial(){
   uint8_t c;
-  serial_ptr_r = ( serial_ptr_r + 1 ) & (SIZE_CAN_BUF - 1);
-  c = serial_buf[serial_ptr_r];
+  can_rx.index_r = ( can_rx.index_r + 1 ) & (SIZE_CAN_BUF - 1);
+  c = can_rx.buf[can_rx.index_r];
   return c;
 }
+
+void can_serial_send(){
+  char buf[8];
+  size_t len, i;
+  uint16_t available_bytes = (can_tx.index_w - can_tx.index_r - 1) & (SIZE_CAN_BUF - 1);
+  // Serial.print("can_serial_send ");
+  // Serial.print(available_bytes);
+  // Serial.print(" ");
+  // Serial.print(can_tx.index_w);
+  // Serial.print(" ");
+  // Serial.println(can_tx.index_r);
+
+  while(available_bytes != 0){
+    if(available_bytes > 8){
+      len = 8;
+    }else{
+      len = available_bytes;
+    }
+
+    for(i = 0; i < len; i++){
+      can_tx.index_r = ( can_tx.index_r + 1 ) & (SIZE_CAN_BUF - 1);
+      buf[i] = can_tx.buf[can_tx.index_r];
+    }
+    can_write(buf, len);
+    available_bytes = (can_tx.index_w - can_tx.index_r - 1) & (SIZE_CAN_BUF - 1);
+  }
+}
+
+size_t SerialToCAN::write(uint8_t b){
+	size_t count = 1;
+  size_t free_bytes_in_buf;
+  free_bytes_in_buf = (SIZE_CAN_BUF - can_tx.index_w + can_tx.index_r) & (SIZE_CAN_BUF - 1);
+  if(free_bytes_in_buf >= 1 ){
+    can_tx.buf[can_tx.index_w] = b;
+    can_tx.index_w = (can_tx.index_w + 1) & (SIZE_CAN_BUF - 1);
+    if(b == 0x0A){
+      can_serial_send();
+    }
+  }else{
+    Serial.println(" No enough space for message len = ");
+  }
+	return count;
+}
+
 
 size_t SerialToCAN::write(const char *buffer, size_t size)
 {
 	if (buffer == nullptr) return 0;
-	size_t count = 0;
-	can_write(buffer, size);
-	return count;
+	size_t i;
+  for(i = 0; i < size; i++){
+    write(buffer[i]);
+  }
+	return i;
 }
 
 size_t SerialToCAN::printNumber(unsigned long n, uint8_t base, uint8_t sign)
@@ -198,7 +262,7 @@ size_t SerialToCAN::printNumber(unsigned long n, uint8_t base, uint8_t sign)
 		i--;
 		buf[i] = '-';
 	}
-	return can_write((char*)buf + i, sizeof(buf) - i);
+	return write((char*)buf + i, sizeof(buf) - i);
 }
 
 size_t SerialToCAN::print(const String &s)
@@ -218,10 +282,73 @@ size_t SerialToCAN::print(const String &s)
 	return count;
 }
 
+size_t SerialToCAN::print(long n)
+{
+	uint8_t sign=0;
+
+	if (n < 0) {
+		sign = '-';
+		n = -n;
+	}
+	return printNumber(n, 10, sign);
+}
+
 size_t SerialToCAN::println(void)
 {
-	uint8_t buf[2]={'\r', '\n'};
+	char buf[2]={'\r', '\n'};
 	return write(buf, 2);
+}
+
+size_t SerialToCAN::printFloat(double number, uint8_t digits){
+	uint8_t sign=0;
+	size_t count=0;
+
+	if (isnan(number)) return print("nan");
+    	if (isinf(number)) return print("inf");
+    	if (number > 4294967040.0f) return print("ovf");  // constant determined empirically
+    	if (number <-4294967040.0f) return print("ovf");  // constant determined empirically
+	
+	// Handle negative numbers
+	if (number < 0.0) {
+		sign = 1;
+		number = -number;
+	}
+
+	// Round correctly so that print(1.999, 2) prints as "2.00"
+	double rounding = 0.5;
+	for (uint8_t i=0; i<digits; ++i) {
+		rounding *= 0.1;
+	}
+	number += rounding;
+
+	// Extract the integer part of the number and print it
+	unsigned long int_part = (unsigned long)number;
+	double remainder = number - (double)int_part;
+	count += printNumber(int_part, 10, sign);
+
+	// Print the decimal point, but only if there are digits beyond
+	if (digits > 0) {
+    char buf[16];
+		uint8_t n, count=1;
+		buf[0] = '.';
+
+		// Extract digits from the remainder one at a time
+		if (digits > sizeof(buf) - 1) digits = sizeof(buf) - 1;
+
+		while (digits-- > 0) {
+			remainder *= 10.0;
+			n = (uint8_t)(remainder);
+			buf[count++] = '0' + n;
+			remainder -= n; 
+		}
+		count += write(buf, count);
+	}
+	return count;
+}
+
+size_t SerialToCAN::print(double d){
+  Serial.println("!!! to do print(double d) ");
+  return 0;
 }
 
 // There are 2 different versions of the board
