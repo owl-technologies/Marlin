@@ -58,7 +58,6 @@
 #include "gcode/queue.h"
 
 // #include <oled.h>
-#include "main.h"
 
 #if ENABLED(TOUCH_BUTTONS)
   #include "feature/touch/xpt2046.h"

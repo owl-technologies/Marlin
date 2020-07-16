@@ -34,7 +34,6 @@ GCodeQueue queue;
 #include "../module/planner.h"
 #include "../module/temperature.h"
 #include "../MarlinCore.h"
-#include "../main.h"
 
 #if ENABLED(PRINTER_EVENT_LEDS)
   #include "../feature/leds/printer_event_leds.h"

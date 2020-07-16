@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <oled.h>
 #include "MarlinCore.h"
-
 ///it needs to compile FlexCAN_T4 well
 #undef min
 #undef max
@@ -12,15 +11,20 @@
 //2 - 1 << 2 = 4 Z axe
 #define SUPPORTED_AXES 2
 #define MARLIN_CAN_ID  0x711
+#define MASTER_CAN_ID  0x712
 #define SIZE_CAN_BUF  256 //use only multiply of 2
 
 #include <FlexCAN_T4.h>
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> Can0;
 
+SerialToCAN SerialCAN;
+
 uint8_t serial_buf[SIZE_CAN_BUF];
 uint16_t serial_ptr_r, serial_ptr_w;
 uint8_t serial_wait_data = 0; //it should contein number of expected data len
 const uint8_t can_header[4] = {0xAA, 0xBB, 0xCC, 0xDD};
+
+//SerialToCAN SerialCAN;
 
 void canSniff(const CAN_message_t &msg) {
   // Serial.print("MB "); Serial.print(msg.mb);
@@ -77,14 +81,37 @@ void canSniff(const CAN_message_t &msg) {
   }
 }
 
-void can_init_send_msg(){
+void can_write_less_8bytes(const char *buffer, size_t size){
     CAN_message_t msg;
-    msg.id = MARLIN_CAN_ID;
-    msg.buf[0] = 0xDD;
-    msg.buf[1] = SUPPORTED_AXES;
-    msg.len = 2;
+    msg.id = MASTER_CAN_ID;
+    memcpy(msg.buf, buffer, size);
+    msg.len = size;
     Can0.write(msg);
-    Serial.println("CAN inited ");
+}
+
+void can_init_send_msg(){
+  char buf[] = {0xDD, SUPPORTED_AXES};
+  can_write_less_8bytes(buf, sizeof(buf));
+  Serial.println("CAN inited ");
+}
+
+size_t can_write(const char *buffer, size_t size){
+  char buf[8];
+  uint16_t i = 0, len;
+
+  memcpy(buf, can_header, 4);
+  buf[4] = size;
+  can_write_less_8bytes(buf, 5); //send length
+
+  while(i < size){
+    len = size - i;
+    if(len > 8){
+      len = 8;
+    }
+    can_write_less_8bytes(buffer + i, len);
+    i += len;
+  }
+  return i;
 }
 
 void can_setup(void) {
@@ -129,6 +156,72 @@ int can_read_serial(){
   serial_ptr_r = ( serial_ptr_r + 1 ) & (SIZE_CAN_BUF - 1);
   c = serial_buf[serial_ptr_r];
   return c;
+}
+
+size_t SerialToCAN::write(const char *buffer, size_t size)
+{
+	if (buffer == nullptr) return 0;
+	size_t count = 0;
+	can_write(buffer, size);
+	return count;
+}
+
+size_t SerialToCAN::printNumber(unsigned long n, uint8_t base, uint8_t sign)
+{
+	uint8_t buf[34];
+	uint8_t digit, i;
+
+	// TODO: make these checks as inline, since base is
+	// almost always a constant.  base = 0 (BYTE) should
+	// inline as a call directly to write()
+	if (base == 0) {
+		return write((uint8_t)n);
+	} else if (base == 1) {
+		base = 10;
+	}
+
+
+	if (n == 0) {
+		buf[sizeof(buf) - 1] = '0';
+		i = sizeof(buf) - 1;
+	} else {
+		i = sizeof(buf) - 1;
+		while (1) {
+			digit = n % base;
+			buf[i] = ((digit < 10) ? '0' + digit : 'A' + digit - 10);
+			n /= base;
+			if (n == 0) break;
+			i--;
+		}
+	}
+	if (sign) {
+		i--;
+		buf[i] = '-';
+	}
+	return can_write((char*)buf + i, sizeof(buf) - i);
+}
+
+size_t SerialToCAN::print(const String &s)
+{
+	char buffer[9];
+	size_t count = 0;
+	unsigned int index = 0;
+	unsigned int len = s.length();
+	while (len > 0) {
+		s.getBytes((unsigned char*)buffer, sizeof(buffer), index);
+		unsigned int nbytes = len;
+		if (nbytes > sizeof(buffer)-1) nbytes = sizeof(buffer)-1;
+		index += nbytes;
+		len -= nbytes;
+		count += can_write(buffer, nbytes);
+	}
+	return count;
+}
+
+size_t SerialToCAN::println(void)
+{
+	uint8_t buf[2]={'\r', '\n'};
+	return write(buf, 2);
 }
 
 // There are 2 different versions of the board
