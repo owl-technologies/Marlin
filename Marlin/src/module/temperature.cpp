@@ -1425,6 +1425,8 @@ void Temperature::manage_heater() {
           return TEMP_AD595(raw);
         #elif ENABLED(HEATER_0_USES_AD8495)
           return TEMP_AD8495(raw);
+        #elif ENABLED(HEATER_0_USES_ADS1115)
+          return ADCgetTemperature(ADC_I2C_HEATER0);
         #else
           break;
         #endif
@@ -1437,6 +1439,8 @@ void Temperature::manage_heater() {
           return TEMP_AD595(raw);
         #elif ENABLED(HEATER_1_USES_AD8495)
           return TEMP_AD8495(raw);
+        #elif ENABLED(HEATER_1_USES_ADS1115)
+          return ADCgetTemperature(ADC_I2C_HEATER1);         
         #else
           break;
         #endif
@@ -1525,6 +1529,8 @@ void Temperature::manage_heater() {
       return TEMP_AD595(raw);
     #elif ENABLED(HEATER_BED_USES_AD8495)
       return TEMP_AD8495(raw);
+    #elif ENABLED(HEATER_BED_USES_ADS1115)
+      return ADCgetTemperature(ADC_I2C_HEATER_BED);  
     #else
       UNUSED(raw);
       return 0;
@@ -1649,6 +1655,8 @@ void Temperature::init() {
   #if ENABLED(MAX6675_IS_MAX31865)
     max31865.begin(MAX31865_2WIRE); // MAX31865_2WIRE, MAX31865_3WIRE, MAX31865_4WIRE
   #endif
+
+  ads1115_i2c_init();
 
   #if EARLY_WATCHDOG
     // Flag that the thermalManager should be running
@@ -1857,12 +1865,17 @@ void Temperature::init() {
         temp_range[NR].raw_max -= TEMPDIR(NR) * (OVERSAMPLENR); \
     }while(0)
 
+Serial.println("\r\nadc_i2c_debug wait init _TEMP_MIN_E ");
     #ifdef HEATER_0_MINTEMP
       _TEMP_MIN_E(0);
     #endif
+Serial.println("\r\nadc_i2c_debug _TEMP_MIN_E ");
+
     #ifdef HEATER_0_MAXTEMP
       _TEMP_MAX_E(0);
     #endif
+
+ Serial.println("\r\adc_i2c_debug _TEMP_MAX_E ");   
     #if HOTENDS > 1
       #ifdef HEATER_1_MINTEMP
         _TEMP_MIN_E(1);

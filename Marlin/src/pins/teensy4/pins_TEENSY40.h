@@ -105,8 +105,8 @@
 //
 // Steppers
 //
-#define X_STEP_PIN         -1
-#define X_DIR_PIN          -1
+#define X_STEP_PIN         9
+#define X_DIR_PIN          10
 #define X_ENABLE_PIN       4
 #define X_CS_PIN           -1
 
@@ -120,9 +120,9 @@
 #define Z_DIR_PIN          8
 #define Z_ENABLE_PIN       4
 
-#define E0_STEP_PIN        9
-#define E0_DIR_PIN         10
-#define E0_ENABLE_PIN      4
+#define E0_STEP_PIN        25
+#define E0_DIR_PIN         25
+#define E0_ENABLE_PIN      25
 
 #define HEATER_0_PIN       2
 #define HEATER_1_PIN       -1
@@ -136,7 +136,7 @@
 #define CONTROLLER_FAN_PIN -1
 #endif
 
-#define TEMP_0_PIN          16   // Extruder / Analog pin numbering
+#define TEMP_0_PIN          -1   // Extruder / Use from i2c adc
 #define TEMP_1_PIN          -1
 #define TEMP_BED_PIN        -1   // Bed / Analog pin numbering
 

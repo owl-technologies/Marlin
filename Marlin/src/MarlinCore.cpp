@@ -1163,7 +1163,6 @@ void setup() {
   SET_OUTPUT(13);
   SET_OUTPUT(0);
   WRITE(13, 1);
-  ads1118_i2c_init();
 
   SETUP_LOG("setup() completed.");
 }
@@ -1206,7 +1205,8 @@ void loop() {
       WRITE(13, ledst % 2);
 
       if(ledst % 4 == 0){
-        ads1115_loop();
+        // ads1115_loop();
+        ADCupdateValues();
       }
     }
 

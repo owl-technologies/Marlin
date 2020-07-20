@@ -351,6 +351,7 @@
  *
  * Temperature sensors available:
  *
+ *    -6 : thermocouple with ADS1115 (only for sensors 0-1)
  *    -5 : PT100 / PT1000 with MAX31865 (only for sensors 0-1)
  *    -3 : thermocouple with MAX31855 (only for sensors 0-1)
  *    -2 : thermocouple with MAX6675 (only for sensors 0-1)
@@ -406,7 +407,7 @@
  *   998 : Dummy Table that ALWAYS reads 25°C or the temperature defined below.
  *   999 : Dummy Table that ALWAYS reads 100°C or the temperature defined below.
  */
-#define TEMP_SENSOR_0 1
+#define TEMP_SENSOR_0 -6
 #define TEMP_SENSOR_1 0
 #define TEMP_SENSOR_2 0
 #define TEMP_SENSOR_3 0
