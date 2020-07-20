@@ -57,8 +57,6 @@
 #include "gcode/parser.h"
 #include "gcode/queue.h"
 
-// #include <oled.h>
-
 #if ENABLED(TOUCH_BUTTONS)
   #include "feature/touch/xpt2046.h"
 #endif
@@ -1165,8 +1163,7 @@ void setup() {
   SET_OUTPUT(13);
   SET_OUTPUT(0);
   WRITE(13, 1);
-//  setup_oled();
-//  loop_oled();
+  ads1118_i2c_init();
 
   SETUP_LOG("setup() completed.");
 }
@@ -1207,6 +1204,10 @@ void loop() {
       k = 0;
       ledst++;
       WRITE(13, ledst % 2);
+
+      if(ledst % 4 == 0){
+        ads1115_loop();
+      }
     }
 
     can_proc_in_loop();

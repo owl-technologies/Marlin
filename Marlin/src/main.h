@@ -1,8 +1,12 @@
+#include "ads1115.h"
 
 void can_setup(void);
 void can_proc_in_loop();
 bool can_data_available();
 int can_read_serial();
+
+void ads1118_i2c_init();
+void ads1115_loop();
 
 class SerialToCAN
 {
