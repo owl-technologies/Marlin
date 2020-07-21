@@ -49,15 +49,15 @@ float ADCgetTemperature(uint8_t num_ch){
 void ADCupdateValues(){
     uint8_t i, mux;
 
-    for(i = 0; i < ADC_I2C_HEATER1; i++){
+    for(i = 0; i < ADC_I2C_NUM_SENSORS; i++){
         switch(i){
         case ADC_I2C_HEATER0:
             mux = ADS1115_MUX_P0_N1;
             break;
-        case ADC_I2C_HEATER1:
-            mux = ADS1115_MUX_P2_NG;
-            break;
-//        case ADC_I2C_HEATER_BED:
+        // case ADC_I2C_HEATER1:
+        //     mux = ADS1115_MUX_P2_NG;
+        //     break;
+        case ADC_I2C_HEATER_BED:
         default:
             mux = ADS1115_MUX_P3_NG;
         }

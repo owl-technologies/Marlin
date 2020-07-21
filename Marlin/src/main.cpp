@@ -250,6 +250,7 @@ size_t SerialToCAN::write(uint8_t b){
 
   if(b == 0x0A){
     can_serial_send();
+    Serial.print("\r\n");
   }
 	return count;
 }
