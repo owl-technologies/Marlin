@@ -1802,7 +1802,7 @@ void Temperature::init() {
   #if HAS_JOY_ADC_EN
     SET_INPUT_PULLUP(JOY_EN_PIN);
   #endif
-  #if HAS_HEATED_BED
+  #if 0//HAS_HEATED_BED
     HAL_ANALOG_SELECT(TEMP_BED_PIN);
   #endif
   #if HAS_TEMP_CHAMBER
@@ -2856,7 +2856,7 @@ void Temperature::tick() {
       case MeasureTemp_0: ACCUMULATE_ADC(temp_hotend[0]); break;
     #endif
 
-    #if HAS_HEATED_BED
+    #if 0//HAS_HEATED_BED
       case PrepareTemp_BED: HAL_START_ADC(TEMP_BED_PIN); break;
       case MeasureTemp_BED: ACCUMULATE_ADC(temp_bed); break;
     #endif

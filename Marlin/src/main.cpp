@@ -130,7 +130,7 @@ size_t can_write(const char *buffer, size_t size){
 
 int can_is_able_to_send_message(){
   int res = 0;
-  if(Can0.getTXQueueCount() < 16){
+  if(Can0.getTXQueueCount() < 14){
     res = 1;
   }else{
     res = 0;
