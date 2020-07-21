@@ -13,7 +13,7 @@
 
 #define MARLIN_CAN_ID  0x711
 #define MASTER_CAN_ID  0x710
-#define SIZE_CAN_BUF  256 //use only multiply of 2
+#define SIZE_CAN_BUF  4096 //use only multiply of 2
 
 #include <FlexCAN_T4.h>
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> Can0;
@@ -128,6 +128,16 @@ size_t can_write(const char *buffer, size_t size){
   return i;
 }
 
+int can_is_able_to_send_message(){
+  int res = 0;
+  if(Can0.getTXQueueCount() < 16){
+    res = 1;
+  }else{
+    res = 0;
+  }
+  return res;
+}
+
 void can_setup(void) {
   Can0.begin();
   Can0.setBaudRate(500000);
@@ -180,14 +190,17 @@ void can_serial_send(){
   char buf[8];
   size_t len, i;
   uint16_t available_bytes = (can_tx.index_w - can_tx.index_r - 1) & (SIZE_CAN_BUF - 1);
-  // Serial.print("can_serial_send ");
-  // Serial.print(available_bytes);
-  // Serial.print(" ");
-  // Serial.print(can_tx.index_w);
-  // Serial.print(" ");
-  // Serial.println(can_tx.index_r);
 
-  while(available_bytes != 0){
+  // if(available_bytes > 0){
+  //   Serial.print("\r\ncan_serial_send ");
+  //   Serial.print(available_bytes);
+  //   Serial.print(" ");
+  //   Serial.print(can_tx.index_w);
+  //   Serial.print(" ");
+  //   Serial.println(can_tx.index_r);
+  // }
+
+  while((available_bytes != 0) && (can_is_able_to_send_message() == 1)){
     if(available_bytes > 8){
       len = 8;
     }else{
@@ -206,15 +219,37 @@ void can_serial_send(){
 size_t SerialToCAN::write(uint8_t b){
 	size_t count = 1;
   size_t free_bytes_in_buf;
+  static uint16_t skip_input = 0;
   free_bytes_in_buf = (SIZE_CAN_BUF - can_tx.index_w + can_tx.index_r) & (SIZE_CAN_BUF - 1);
-  if(free_bytes_in_buf >= 1 ){
+
+  // if(b == 0x0A){
+  //   Serial.print("\r\n free_bytes_in_buf = ");
+  //   Serial.println(free_bytes_in_buf);
+
+  //   Serial.print("can_tx.index_w = ");
+  //   Serial.print(can_tx.index_w);
+  //   Serial.print(" can_tx.index_r =  ");
+  //   Serial.println(can_tx.index_r);    
+  // }
+  
+  if(free_bytes_in_buf > 8 ){
     can_tx.buf[can_tx.index_w] = b;
     can_tx.index_w = (can_tx.index_w + 1) & (SIZE_CAN_BUF - 1);
-    if(b == 0x0A){
-      can_serial_send();
+
+    if(skip_input > 0){
+      Serial.print("\r\n !!!! skiped: ");
+      Serial.println(skip_input);
+      skip_input = 0;
     }
   }else{
-    Serial.println(" No enough space for message len = ");
+    if(skip_input == 0){
+      Serial.println("\r\n !!!! skip !!!! ");
+    }
+    skip_input++;
+  }
+
+  if(b == 0x0A){
+    can_serial_send();
   }
 	return count;
 }
