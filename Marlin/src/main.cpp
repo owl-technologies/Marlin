@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "MarlinCore.h"
 #include "math.h"
+#include "imxrt_flexcan.h"
 ///it needs to compile FlexCAN_T4 well
 #undef min
 #undef max
@@ -16,7 +17,7 @@
 #define SIZE_CAN_BUF  4096 //use only multiply of 2
 
 #include <FlexCAN_T4.h>
-FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> Can0;
+FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_256> Can0;
 
 SerialToCAN SerialCAN;
 
@@ -31,8 +32,7 @@ can_buf_t can_rx, can_tx;
 uint8_t serial_wait_data = 0; //it should contein number of expected data len
 const uint8_t can_header[4] = {0xAA, 0xBB, 0xCC, 0xDD};
 uint8_t wait_init_can = 1;
-
-//SerialToCAN SerialCAN;
+uint8_t MB_index = 0;
 
 void canSniff(const CAN_message_t &msg) {
   // Serial.print("MB "); Serial.print(msg.mb);
@@ -89,8 +89,13 @@ void canSniff(const CAN_message_t &msg) {
   }
 }
 
+#define TX_MB_offset  8
+#define MB_TX_COUNT 32
 void can_write_less_8bytes(const char *buffer, size_t size){
     CAN_message_t msg;
+    int res;
+    // static int addr = 0x100;
+    // msg.id = addr++;    
     msg.id = MASTER_CAN_ID;
     memcpy(msg.buf, buffer, size);
     msg.len = size;
@@ -98,7 +103,12 @@ void can_write_less_8bytes(const char *buffer, size_t size){
       Serial.print("waiting CAN init ");
       Serial.println(size);
     }else{
-      Can0.write(msg);
+      res = Can0.write(MB8 + MB_index, msg);
+      MB_index = (MB_index + 1) & (MB_TX_COUNT - 1);
+      // Serial.print("\r\ncan_write_less_8bytes res = ");
+      // Serial.print(res);
+      // Serial.print("MB_index next = ");
+      // Serial.println(MB_index);
     }
     
 }
@@ -110,8 +120,9 @@ void can_init_send_msg(){
 }
 
 size_t can_write(const char *buffer, size_t size){
-  char buf[8];
+  char buf[8];//, *ptr;
   uint16_t i = 0, len;
+  static uint8_t cnt = 0;
 
   memcpy(buf, can_header, 4);
   buf[4] = size;
@@ -122,26 +133,55 @@ size_t can_write(const char *buffer, size_t size){
     if(len > 8){
       len = 8;
     }
+    // ptr = &buffer[i];
+    // *ptr = cnt++;
+
     can_write_less_8bytes(buffer + i, len);
     i += len;
   }
   return i;
 }
 
-int can_is_able_to_send_message(){
+// int can_is_able_to_send_message(){
+//   int res = 0;
+//   if(Can0.getTXQueueCount() < 14){
+//     res = 1;
+//   }else{
+//     res = 0;
+//   }
+//   return res;
+// }
+
+int can_get_free_buf_size(){
   int res = 0;
-  if(Can0.getTXQueueCount() < 14){
-    res = 1;
-  }else{
-    res = 0;
+  int num_buf;
+  uint8_t i = 0, k;
+
+  for(i = 0; i < MB_TX_COUNT; i++){
+    k = (i + MB_index) & (MB_TX_COUNT - 1);
+    // Serial.println("\r\n123 ");
+    // Serial.println(FLEXCANb_MBn_CS(CAN1, (k + TX_MB_offset)));
+    if(FLEXCAN_get_code(FLEXCANb_MBn_CS(CAN1, (k + TX_MB_offset))) != 0b1000){ //code: TX_INACTIVE
+      break;
+    }
   }
+
+
+  num_buf = i;
+  if(num_buf > 2){
+    num_buf -= 2;
+  }else{
+    num_buf = 0;
+  }
+  res = num_buf * 8;
+
   return res;
 }
 
 void can_setup(void) {
   Can0.begin();
   Can0.setBaudRate(500000);
-  Can0.setMaxMB(64);
+  Can0.setMaxMB(8 + MB_TX_COUNT); //8 RX + 32 TX
   Can0.enableFIFO();
   Can0.enableFIFOInterrupt();
   Can0.onReceive(canSniff);
@@ -187,33 +227,59 @@ int can_read_serial(){
 }
 
 void can_serial_send(){
-  char buf[8];
-  size_t len, i;
+  // char buf[8];
+  // size_t len, i;
   uint16_t available_bytes = (can_tx.index_w - can_tx.index_r - 1) & (SIZE_CAN_BUF - 1);
+  uint16_t free_buf_size = can_get_free_buf_size(), sent_bytes;
 
-  // if(available_bytes > 0){
-  //   Serial.print("\r\ncan_serial_send ");
-  //   Serial.print(available_bytes);
-  //   Serial.print(" ");
-  //   Serial.print(can_tx.index_w);
-  //   Serial.print(" ");
-  //   Serial.println(can_tx.index_r);
-  // }
-
-  while((available_bytes != 0) && (can_is_able_to_send_message() == 1)){
-    if(available_bytes > 8){
-      len = 8;
-    }else{
-      len = available_bytes;
-    }
-
-    for(i = 0; i < len; i++){
-      can_tx.index_r = ( can_tx.index_r + 1 ) & (SIZE_CAN_BUF - 1);
-      buf[i] = can_tx.buf[can_tx.index_r];
-    }
-    can_write(buf, len);
+  if((can_tx.index_w < can_tx.index_r)
+  && (can_tx.index_r != (SIZE_CAN_BUF - 1))){
+    available_bytes = SIZE_CAN_BUF - 1 - can_tx.index_r;
+  }else{
     available_bytes = (can_tx.index_w - can_tx.index_r - 1) & (SIZE_CAN_BUF - 1);
   }
+
+  if(free_buf_size < available_bytes){
+    sent_bytes = free_buf_size;
+  }else{
+    sent_bytes = available_bytes;
+  }
+
+  if(available_bytes > 0){
+    Serial.print("\r\ncan_serial_send ");
+    Serial.print(available_bytes);
+    Serial.print(" ");
+    Serial.print(can_tx.index_w);
+    Serial.print(" ");
+    Serial.print(can_tx.index_r);
+    Serial.print(" sent_bytes= ");
+    Serial.print(sent_bytes);
+    Serial.print(" free_buf_size= ");
+    Serial.println(free_buf_size);
+    
+  }
+
+// Can0.mailboxStatus();
+
+  if(sent_bytes > 0){
+    can_tx.index_r = ( can_tx.index_r + 1 ) & (SIZE_CAN_BUF - 1);
+    can_write((const char*)&can_tx.buf[can_tx.index_r], sent_bytes);
+    can_tx.index_r = ( can_tx.index_r + sent_bytes - 1) & (SIZE_CAN_BUF - 1);
+  }
+  // while((available_bytes != 0) && (can_is_able_to_send_message() == 1)){
+  //   if(available_bytes > 8){
+  //     len = 8;
+  //   }else{
+  //     len = available_bytes;
+  //   }
+
+  //   for(i = 0; i < len; i++){
+  //     can_tx.index_r = ( can_tx.index_r + 1 ) & (SIZE_CAN_BUF - 1);
+  //     buf[i] = can_tx.buf[can_tx.index_r];
+  //   }
+  //   can_write(buf, len);
+  //   available_bytes = (can_tx.index_w - can_tx.index_r - 1) & (SIZE_CAN_BUF - 1);
+  // }
 }
 
 size_t SerialToCAN::write(uint8_t b){
@@ -253,6 +319,18 @@ size_t SerialToCAN::write(uint8_t b){
     Serial.print("\r\n");
   }
 	return count;
+}
+
+void can_debug_messages(){
+  // uint8_t i, j, buf[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0xA};
+  
+  // for(i = 0; i < 10; i++){
+  //   buf[1] = i;
+  //   for(j = 0; j < sizeof(buf); j++){
+  //     SerialCAN.write(buf[j]);
+  //   }
+  // }
+  Can0.mailboxStatus();
 }
 
 

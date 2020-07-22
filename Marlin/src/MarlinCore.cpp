@@ -901,6 +901,8 @@ void setup() {
   SERIAL_ECHOLNPGM("start");
   SERIAL_ECHO_START();
 
+
+  can_debug_messages();
   #if HAS_TMC_SPI
     #if DISABLED(TMC_USE_SW_SPI)
       SPI.begin();
