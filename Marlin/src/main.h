@@ -6,6 +6,7 @@ bool can_data_available();
 int can_read_serial();
 int can_is_able_to_send_message();
 void can_debug_messages();
+void can_serial_send();
 
 
 class SerialToCAN
@@ -38,7 +39,7 @@ class SerialToCAN
 
     size_t println(void);
 	size_t println(const String &s)			{ return print(s) + println(); }
-	size_t println(char c)				{ return print(c) + println(); }
+	size_t println(char c)				{ if(c < '0'){ c += '0';} return print(c) + println(); }
 	size_t println(const char s[])			{ return print(s) + println(); }
   private:
 	size_t printNumber(unsigned long n, uint8_t base, uint8_t sign);

@@ -1206,6 +1206,8 @@ void loop() {
       ledst++;
       WRITE(13, ledst % 2);
 
+      can_serial_send();
+
       if(ledst % 4 == 0){
         // ads1115_loop();
         ADCupdateValues();

@@ -96,6 +96,7 @@ void can_write_less_8bytes(const char *buffer, size_t size){
     int res;
     // static int addr = 0x100;
     // msg.id = addr++;    
+    // msg.id = MASTER_CAN_ID + MB_index;
     msg.id = MASTER_CAN_ID;
     memcpy(msg.buf, buffer, size);
     msg.len = size;
@@ -104,13 +105,12 @@ void can_write_less_8bytes(const char *buffer, size_t size){
       Serial.println(size);
     }else{
       res = Can0.write(MB8 + MB_index, msg);
-      MB_index = (MB_index + 1) & (MB_TX_COUNT - 1);
-      // Serial.print("\r\ncan_write_less_8bytes res = ");
+      // Serial.print("\r\n      can_write_less_8bytes res = ");
       // Serial.print(res);
-      // Serial.print("MB_index next = ");
+      // Serial.print("  MB_index = ");
       // Serial.println(MB_index);
+      MB_index = (MB_index + 1) & (MB_TX_COUNT - 1);
     }
-    
 }
 
 void can_init_send_msg(){
@@ -122,7 +122,7 @@ void can_init_send_msg(){
 size_t can_write(const char *buffer, size_t size){
   char buf[8];//, *ptr;
   uint16_t i = 0, len;
-  static uint8_t cnt = 0;
+  // static uint8_t cnt = 0;
 
   memcpy(buf, can_header, 4);
   buf[4] = size;
@@ -155,24 +155,33 @@ size_t can_write(const char *buffer, size_t size){
 int can_get_free_buf_size(){
   int res = 0;
   int num_buf;
-  uint8_t i = 0, k;
+  uint8_t i = 0, k = 0;
 
-  for(i = 0; i < MB_TX_COUNT; i++){
-    k = (i + MB_index) & (MB_TX_COUNT - 1);
-    // Serial.println("\r\n123 ");
-    // Serial.println(FLEXCANb_MBn_CS(CAN1, (k + TX_MB_offset)));
-    if(FLEXCAN_get_code(FLEXCANb_MBn_CS(CAN1, (k + TX_MB_offset))) != 0b1000){ //code: TX_INACTIVE
+  for(i = MB_index; i < MB_TX_COUNT; i++){
+    if(FLEXCAN_get_code(FLEXCANb_MBn_CS(CAN1, (i + TX_MB_offset))) != FLEXCAN_MB_CODE_TX_INACTIVE){ //code: TX_INACTIVE
       break;
     }
+    k++;
   }
 
-
-  num_buf = i;
-  if(num_buf > 2){
-    num_buf -= 2;
-  }else{
-    num_buf = 0;
+  //wait until message in last MB will be sent
+  if((MB_index == 0)
+  &&(FLEXCAN_get_code(FLEXCANb_MBn_CS(CAN1, (MB_TX_COUNT - 1 + TX_MB_offset))) != FLEXCAN_MB_CODE_TX_INACTIVE)){
+    k = 0; 
   }
+
+  // if((FLEXCAN_get_code(FLEXCANb_MBn_CS(CAN1, (MB_TX_COUNT - 1 + TX_MB_offset))) != FLEXCAN_MB_CODE_TX_INACTIVE)
+  // || (FLEXCAN_get_code(FLEXCANb_MBn_CS(CAN1, (MB_TX_COUNT - 2 + TX_MB_offset))) != FLEXCAN_MB_CODE_TX_INACTIVE)){
+  //   i = 0;
+  //   // Serial.println("Wait Flag inactive");
+  // }
+
+  num_buf = k;
+  // if(num_buf > 2){
+  //   num_buf -= 2;
+  // }else{
+  //   num_buf = 0;
+  // }
   res = num_buf * 8;
 
   return res;
@@ -239,6 +248,13 @@ void can_serial_send(){
     available_bytes = (can_tx.index_w - can_tx.index_r - 1) & (SIZE_CAN_BUF - 1);
   }
 
+  if(free_buf_size > 8){
+    free_buf_size -= 8; //for message with header
+  }else if ((free_buf_size > 0) && (MB_index == 0)){
+    free_buf_size = 0;
+    can_write((const char*)&can_tx.buf[can_tx.index_r], 0); //send only header with 0 len
+  }
+
   if(free_buf_size < available_bytes){
     sent_bytes = free_buf_size;
   }else{
@@ -246,7 +262,8 @@ void can_serial_send(){
   }
 
   if(available_bytes > 0){
-    Serial.print("\r\ncan_serial_send ");
+  // if(sent_bytes > 0){
+    Serial.print("\r\n    can_serial_send ");
     Serial.print(available_bytes);
     Serial.print(" ");
     Serial.print(can_tx.index_w);
@@ -256,12 +273,11 @@ void can_serial_send(){
     Serial.print(sent_bytes);
     Serial.print(" free_buf_size= ");
     Serial.println(free_buf_size);
-    
   }
 
 // Can0.mailboxStatus();
 
-  if(sent_bytes > 0){
+  if(sent_bytes > 1){
     can_tx.index_r = ( can_tx.index_r + 1 ) & (SIZE_CAN_BUF - 1);
     can_write((const char*)&can_tx.buf[can_tx.index_r], sent_bytes);
     can_tx.index_r = ( can_tx.index_r + sent_bytes - 1) & (SIZE_CAN_BUF - 1);
@@ -322,15 +338,32 @@ size_t SerialToCAN::write(uint8_t b){
 }
 
 void can_debug_messages(){
-  // uint8_t i, j, buf[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0xA};
+  // uint16_t free_b;
+  // uint8_t i, j, d, buf[] = {0, 0, 0, 0, 0, 0, 0xF, 0xB};
   
-  // for(i = 0; i < 10; i++){
-  //   buf[1] = i;
-  //   for(j = 0; j < sizeof(buf); j++){
-  //     SerialCAN.write(buf[j]);
-  //   }
-  // }
   Can0.mailboxStatus();
+  // d = 0;
+  // while(1){
+  //   free_b = (can_tx.index_r - can_tx.index_w) & (SIZE_CAN_BUF - 1);
+  //    if(free_b > 1024){
+  //      Serial.print("free_b = ");
+  //      Serial.print(free_b);
+  //     Serial.print("  can_debug_messages SENT!\r\n");
+  //     for(i = 0; i < 16; i++){
+  //       buf[1] = 16 + i;
+  //       for(j = 0; j < sizeof(buf); j++){
+  //         SerialCAN.write(buf[j]);
+  //       }
+  //     }
+  //     // delay(1000);
+  //    }
+
+  //   if(d++ % 1000 == 0){
+  //     d = 0;
+  //     can_serial_send();
+  //   }
+    
+  // }
 }
 
 
